@@ -27,7 +27,6 @@ export default function LoginPage() {
   const loginWithPasswordMut = useMutation(api.auth.loginWithPassword);
   const requestOtpMut = useMutation(api.auth.requestOtp);
   const loginWithOtpMut = useMutation(api.auth.loginWithOtp);
-  const seedDatabaseMut = useMutation(api.users.seedSystemAdmin);
 
   // Password Form - Fast Lightweight Defaults
   const passwordForm = useForm<PasswordLoginFormValues>({
@@ -94,18 +93,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleSeedDatabase = async () => {
-    setAuthError(null);
-    setIsSubmitting(true);
-    try {
-      const res = await seedDatabaseMut({});
-      setInfoMessage(res.message || "Database seeded with default Super Admin account (admin@company.com / Admin@123456).");
-    } catch (err: any) {
-      setAuthError("Database seed failed: " + (err.message || "Check network connection"));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+
 
   return (
     <div className="container-fluid min-vh-100 bg-white d-flex flex-column justify-content-center align-items-center py-5">
@@ -257,18 +245,7 @@ export default function LoginPage() {
               </form>
             )}
 
-            {/* Initial Database Seeding Helper Button */}
-            <hr className="my-4" />
-            <div className="text-center">
-              <button
-                type="button"
-                className="btn btn-outline-secondary btn-sm rounded-0"
-                onClick={handleSeedDatabase}
-                disabled={isSubmitting}
-              >
-                <i className="bi bi-database-gear me-1"></i> Initialize Database Super Admin
-              </button>
-            </div>
+
           </div>
         </div>
       </div>
