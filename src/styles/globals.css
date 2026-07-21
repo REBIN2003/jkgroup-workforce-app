@@ -1,0 +1,238 @@
+@import "bootstrap/dist/css/bootstrap.min.css";
+@import "bootstrap-icons/font/bootstrap-icons.css";
+
+/* Enterprise Classic ERP Styling System */
+
+:root {
+  --erp-navy: #003366;
+  --erp-blue: #0d6efd;
+  --erp-blue-hover: #0b5ed7;
+  --erp-sidebar-bg: #212529;
+  --erp-sidebar-hover: #343a40;
+  --erp-bg-body: #ffffff;
+  --erp-text-body: #000000;
+  --erp-border-color: #dee2e6;
+  --erp-red: #dc3545;
+  --erp-red-hover: #bb2d3b;
+}
+
+body {
+  background-color: var(--erp-bg-body) !important;
+  color: var(--erp-text-body) !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-size: 14px;
+  margin: 0;
+  padding: 0;
+}
+
+/* Header Navbar */
+.erp-top-navbar {
+  background-color: var(--erp-navy) !important;
+  border-bottom: 2px solid #001f3f;
+  min-height: 52px;
+}
+
+.erp-brand-title {
+  color: #ffffff !important;
+  font-weight: bold;
+  font-size: 1.1rem;
+  letter-spacing: 0.5px;
+}
+
+/* Responsive Sidebar */
+.erp-sidebar {
+  width: 240px;
+  background-color: var(--erp-sidebar-bg);
+  border-right: 1px solid #111;
+  transition: transform 0.3s ease, left 0.3s ease;
+}
+
+@media (max-width: 991.98px) {
+  .erp-sidebar {
+    position: fixed;
+    top: 52px;
+    left: -240px;
+    height: calc(100vh - 52px);
+    z-index: 1040;
+  }
+  .erp-sidebar.open {
+    left: 0;
+    transform: translateX(240px);
+  }
+}
+
+@media (min-width: 992px) {
+  .erp-sidebar {
+    min-height: calc(100vh - 52px);
+    display: block !important;
+  }
+}
+
+.erp-sidebar-link {
+  color: #ced4da !important;
+  text-decoration: none;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  border-left: 3px solid transparent;
+  border-bottom: 1px solid #2c3036;
+}
+
+.erp-sidebar-link:hover {
+  background-color: var(--erp-sidebar-hover);
+  color: #ffffff !important;
+}
+
+.erp-sidebar-link.active {
+  background-color: #0d6efd !important;
+  color: #ffffff !important;
+  border-left-color: #ffffff;
+  font-weight: bold;
+}
+
+/* Page Layout Wrapper */
+.erp-content-container {
+  padding: 20px;
+  background-color: #ffffff;
+}
+
+/* Classic Enterprise Data Table */
+.erp-table {
+  border: 1px solid var(--erp-border-color);
+  font-size: 13px;
+  background-color: #ffffff;
+}
+
+.erp-table th {
+  background-color: #f8f9fa !important;
+  color: #000000 !important;
+  font-weight: bold;
+  border-bottom: 2px solid #000000 !important;
+  padding: 8px 12px;
+}
+
+.erp-table td {
+  padding: 8px 12px;
+  vertical-align: middle;
+  border-color: #dee2e6;
+}
+
+/* Enterprise Header Panels */
+.erp-section-header {
+  border-bottom: 2px solid var(--erp-navy);
+  padding-bottom: 8px;
+  margin-bottom: 16px;
+}
+
+/* Red Primary Action Buttons */
+.btn-erp-danger {
+  background-color: var(--erp-red) !important;
+  border-color: var(--erp-red) !important;
+  color: #ffffff !important;
+  border-radius: 2px !important;
+  font-weight: bold;
+
+}
+
+.btn-erp-danger:hover {
+  background-color: var(--erp-red-hover) !important;
+  border-color: var(--erp-red-hover) !important;
+}
+
+.btn-erp-primary {
+  background-color: var(--erp-blue) !important;
+  border-color: var(--erp-blue) !important;
+  color: #ffffff !important;
+  border-radius: 2px !important;
+  font-weight: bold;
+}
+
+.btn-erp-primary:hover {
+  background-color: var(--erp-blue-hover) !important;
+  border-color: var(--erp-blue-hover) !important;
+}
+
+.btn-erp-secondary {
+  background-color: #6c757d !important;
+  border-color: #6c757d !important;
+  color: #ffffff !important;
+  border-radius: 2px !important;
+}
+
+/* Standard Sharp Inputs & Cards */
+.form-control, .form-select {
+  border-radius: 2px !important;
+  border: 1px solid #ced4da !important;
+  font-size: 13px !important;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--erp-navy) !important;
+  box-shadow: none !important;
+}
+
+.card-erp {
+  border: 1px solid #ccc !important;
+  border-radius: 0px !important;
+  box-shadow: none !important;
+  background-color: #fff !important;
+}
+
+.card-erp .card-header {
+  background-color: #f1f3f5 !important;
+  font-weight: bold;
+  border-bottom: 1px solid #ccc !important;
+  color: #000;
+}
+
+/* Global Responsive Layout Helpers */
+@media (max-width: 575.98px) {
+  .btn, .btn-group {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: center;
+    margin-bottom: 8px;
+  }
+  .btn-group .btn {
+    margin-bottom: 0;
+  }
+  .erp-content-container {
+    padding: 12px !important;
+  }
+}
+
+/* Form inputs & buttons touch targets */
+.btn, .form-control, .form-select, .nav-link {
+  min-height: 38px;
+}
+
+/* Prevent text overflows for extreme names or dynamic paths */
+.text-truncate-responsive {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Scrollable Table wrappers */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 767.98px) {
+  .border-end-responsive {
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--erp-border-color);
+    padding-bottom: 12px;
+  }
+}
+@media (min-width: 768px) {
+  .border-end-responsive {
+    border-right: 1px solid var(--erp-border-color);
+  }
+}
+
