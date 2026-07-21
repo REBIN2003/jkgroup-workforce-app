@@ -9,7 +9,7 @@ if (!convexUrl) {
   );
 }
 
-// Fallback placeholder URL prevents Next.js static page pre-render/build crashes
+// Fallback to actual production URL prevents client-side 'Couldn't parse deployment name' fatal errors
 export const convex = new ConvexReactClient(
-  convexUrl || "https://placeholder-url.convex.cloud"
+  convexUrl || "https://reliable-ant-46.eu-west-1.convex.cloud"
 );
