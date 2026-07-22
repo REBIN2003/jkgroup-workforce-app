@@ -29,8 +29,9 @@ export default function PendingRegistrationsPage() {
   const rawUsers = useQuery(api.users.listUsers, {}) || [];
   const roles = useQuery(api.users.listRoles, {}) || [];
 
-  const updateUserMut = useMutation(api.users.updateUser);
-  const deleteUserMut = useMutation(api.users.deleteUser);
+  const approveRegistrationMut = useMutation(api.registrations.approveRegistration);
+  const rejectRegistrationMut = useMutation(api.registrations.rejectRegistration);
+  const deleteRegistrationMut = useMutation(api.registrations.deleteRegistration);
 
   // Client-Side Pending Registrations Filtering
   const registrationsList = rawUsers.filter((u: any) => {
@@ -73,16 +74,8 @@ export default function PendingRegistrationsPage() {
     setIsProcessing(true);
     setAlertInfo(null);
     try {
-      // Find matching role ID
-      const targetRoleName = applicant.requestedRoleName || "Employee";
-      const matchedRole = roles.find((r: any) => r.name.toLowerCase() === targetRoleName.toLowerCase()) || roles[0];
-
-      await updateUserMut({
-        userId: applicant._id,
-        fullName: applicant.fullName,
-        phone: applicant.phone || undefined,
-        status: "active",
-        roleId: matchedRole._id,
+      await approveRegistrationMut({
+        userId: applicant._id as Id<"users">,
         actorId: user?._id,
       });
 
@@ -106,13 +99,10 @@ export default function PendingRegistrationsPage() {
     setIsProcessing(true);
     setAlertInfo(null);
     try {
-      await updateUserMut({
-        userId: rejectingApplicant._id,
-        fullName: rejectingApplicant.fullName,
-        phone: rejectingApplicant.phone || undefined,
-        status: "suspended",
-        roleId: rejectingApplicant.roleId,
+      await rejectRegistrationMut({
+        userId: rejectingApplicant._id as Id<"users">,
         actorId: user?._id,
+        reason: rejectionReason.trim(),
       });
 
       setAlertInfo({ type: "success", message: `Registration for ${rejectingApplicant.fullName} rejected.` });
@@ -131,7 +121,7 @@ export default function PendingRegistrationsPage() {
     if (!confirm(`Are you sure you want to permanently delete registration record for ${name}?`)) return;
     setIsProcessing(true);
     try {
-      await deleteUserMut({ userId: userId, actorId: user?._id });
+      await deleteRegistrationMut({ userId: userId, actorId: user?._id });
       setAlertInfo({ type: "success", message: `Registration record for ${name} deleted.` });
     } catch (err: any) {
       setAlertInfo({ type: "danger", message: err.message || "Failed to delete record." });
