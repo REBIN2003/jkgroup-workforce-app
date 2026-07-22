@@ -42,6 +42,9 @@ export default function RegisterPage() {
       password: "",
       confirmPassword: "",
       acceptTerms: false,
+      dateOfBirth: "",
+      placeOfBirth: "",
+      accommodationAddress: "",
     },
   });
 
@@ -73,24 +76,97 @@ export default function RegisterPage() {
     setFormError(null);
     setIsSubmitting(true);
     try {
-      // 1. Upload Profile Photo if selected
+      // 1. Validate required compliance documents
+      const hasTuv = docFiles.some((d) => d.category === "TUV");
+      const hasInsurance = docFiles.some((d) => d.category === "Insurance");
+      const hasVca = docFiles.some((d) => d.category === "VCA");
+
+      if (!hasTuv) {
+        throw new Error("TÜV Certificate is required.");
+      }
+      if (!hasInsurance) {
+        throw new Error("Insurance Certificate is required.");
+      }
+      if (!hasVca) {
+        throw new Error("VCA Certificate is required.");
+      }
+
+      // 2. Validate file sizes and mime types
+      const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+      const MAX_PHOTO_SIZE = 5 * 1024 * 1024; // 5MB
+
+      if (profileImageFile) {
+        if (profileImageFile.size > MAX_PHOTO_SIZE) {
+          throw new Error("Profile Photo exceeds the 5MB maximum size limit.");
+        }
+        const allowedPhotoTypes = ["image/png", "image/jpeg", "image/jpg"];
+        if (!allowedPhotoTypes.includes(profileImageFile.type)) {
+          throw new Error("Profile Photo must be a PNG or JPG/JPEG image.");
+        }
+      }
+
+      for (const d of docFiles) {
+        if (d.file.size > MAX_FILE_SIZE) {
+          throw new Error(`${d.category} file size exceeds the 10MB maximum limit.`);
+        }
+
+        if (d.category === "Insurance") {
+          if (d.file.type !== "application/pdf" && !d.file.name.toLowerCase().endsWith(".pdf")) {
+            throw new Error("Insurance Certificate must be a PDF file.");
+          }
+        } else {
+          const allowedTypes = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
+          if (
+            !allowedTypes.includes(d.file.type) &&
+            !d.file.name.toLowerCase().endsWith(".pdf") &&
+            !d.file.name.toLowerCase().endsWith(".png") &&
+            !d.file.name.toLowerCase().endsWith(".jpg") &&
+            !d.file.name.toLowerCase().endsWith(".jpeg")
+          ) {
+            throw new Error(`${d.category} must be a PDF, PNG, or JPG/JPEG file.`);
+          }
+        }
+      }
+
+      // 3. Upload Profile Photo if selected
       let profileStorageId: any = undefined;
       if (profileImageFile) {
         profileStorageId = await uploadToStorage(profileImageFile);
       }
 
-      // 2. Upload Verification Documents
+      // 4. Upload Verification & Compliance Documents
       const uploadedDocsList = [];
       for (const d of docFiles) {
         const storageId = await uploadToStorage(d.file);
+        
+        let mappedType = "other";
+        if (d.category === "Passport") mappedType = "passport";
+        else if (d.category === "Visa ID") mappedType = "visa";
+        else if (d.category === "Certificates") mappedType = "certificate";
+        else if (d.category === "TUV") mappedType = "tuv_certificate";
+        else if (d.category === "Insurance") mappedType = "insurance_certificate";
+        else if (d.category === "VCA") mappedType = "vca_certificate";
+
         uploadedDocsList.push({
           storageId: storageId as any,
-          fileName: `${d.category} - ${d.file.name}`,
+          fileName: d.file.name,
           fileType: d.file.type,
+          documentType: mappedType,
+          fileSize: d.file.size,
         });
       }
 
-      // 3. Call Registration Mutation
+      if (profileImageFile && profileStorageId) {
+        uploadedDocsList.push({
+          storageId: profileStorageId as any,
+          fileName: profileImageFile.name,
+          fileType: profileImageFile.type,
+          documentType: "profile_photo",
+          fileSize: profileImageFile.size,
+        });
+      }
+
+      // 5. Call Registration Mutation
       const res = await registerUserMut({
         firstName: values.firstName,
         lastName: values.lastName,
@@ -99,6 +175,9 @@ export default function RegisterPage() {
         country: values.country,
         roleName: values.roleName,
         password: values.password,
+        dateOfBirth: values.dateOfBirth,
+        placeOfBirth: values.placeOfBirth,
+        accommodationAddress: values.accommodationAddress,
         profileImageStorageId: profileStorageId,
         uploadedDocuments: uploadedDocsList,
       });
@@ -264,6 +343,47 @@ export default function RegisterPage() {
                     </small>
                   </div>
 
+                  {/* Date of Birth */}
+                  <div className="col-md-6">
+                    <label className="form-label fw-bold small text-dark">Date of Birth *</label>
+                    <input
+                      type="date"
+                      className={`form-control ${form.formState.errors.dateOfBirth ? "is-invalid" : ""}`}
+                      {...form.register("dateOfBirth")}
+                    />
+                    {form.formState.errors.dateOfBirth && (
+                      <div className="invalid-feedback">{form.formState.errors.dateOfBirth.message}</div>
+                    )}
+                  </div>
+
+                  {/* Place of Birth */}
+                  <div className="col-md-6">
+                    <label className="form-label fw-bold small text-dark">Place of Birth *</label>
+                    <input
+                      type="text"
+                      className={`form-control ${form.formState.errors.placeOfBirth ? "is-invalid" : ""}`}
+                      placeholder="London"
+                      {...form.register("placeOfBirth")}
+                    />
+                    {form.formState.errors.placeOfBirth && (
+                      <div className="invalid-feedback">{form.formState.errors.placeOfBirth.message}</div>
+                    )}
+                  </div>
+
+                  {/* Accommodation Address */}
+                  <div className="col-12">
+                    <label className="form-label fw-bold small text-dark">Accommodation Address *</label>
+                    <textarea
+                      className={`form-control ${form.formState.errors.accommodationAddress ? "is-invalid" : ""}`}
+                      rows={3}
+                      placeholder="Enter complete accommodation or housing address..."
+                      {...form.register("accommodationAddress")}
+                    />
+                    {form.formState.errors.accommodationAddress && (
+                      <div className="invalid-feedback">{form.formState.errors.accommodationAddress.message}</div>
+                    )}
+                  </div>
+
                   {/* Password */}
                   <div className="col-md-6">
                     <label className="form-label fw-bold small text-dark">Password *</label>
@@ -344,6 +464,47 @@ export default function RegisterPage() {
                       className="form-control"
                       onChange={(e) => handleAddDocument(e, "Certificates")}
                     />
+                  </div>
+
+                  {/* Professional & Compliance Documents Section */}
+                  <div className="col-12 mt-4">
+                    <h6 className="fw-bold border-bottom pb-2 text-dark">Professional & Compliance Documents</h6>
+                  </div>
+
+                  {/* TÜV Certificate */}
+                  <div className="col-md-4">
+                    <label className="form-label small text-dark fw-bold">TÜV Certificate *</label>
+                    <input
+                      type="file"
+                      accept="application/pdf, image/png, image/jpeg, image/jpg"
+                      className="form-control"
+                      onChange={(e) => handleAddDocument(e, "TUV")}
+                    />
+                    <small className="text-muted">PDF, PNG, JPG (Max 10MB)</small>
+                  </div>
+
+                  {/* Insurance Certificate */}
+                  <div className="col-md-4">
+                    <label className="form-label small text-dark fw-bold">Insurance Certificate *</label>
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      className="form-control"
+                      onChange={(e) => handleAddDocument(e, "Insurance")}
+                    />
+                    <small className="text-muted">PDF only (Max 10MB)</small>
+                  </div>
+
+                  {/* VCA Certificate */}
+                  <div className="col-md-4">
+                    <label className="form-label small text-dark fw-bold">VCA Certificate *</label>
+                    <input
+                      type="file"
+                      accept="application/pdf, image/png, image/jpeg, image/jpg"
+                      className="form-control"
+                      onChange={(e) => handleAddDocument(e, "VCA")}
+                    />
+                    <small className="text-muted">PDF, PNG, JPG (Max 10MB)</small>
                   </div>
 
                   {/* Accept Terms Checkbox */}

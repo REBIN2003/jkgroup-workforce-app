@@ -184,7 +184,7 @@ export const listEmployeeDocuments = query({
 export const createDocument = mutation({
   args: {
     userId: v.id("users"),
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     title: v.string(),
     documentType: v.union(
       v.literal("contract"),
@@ -203,9 +203,27 @@ export const createDocument = mutation({
     uploadedBy: v.id("users"),
   },
   handler: async (ctx, args) => {
+    let targetCompanyId = args.companyId;
+    if (!targetCompanyId) {
+      const targetUser = await ctx.db.get(args.userId);
+      targetCompanyId = targetUser?.companyId;
+    }
+    if (!targetCompanyId) {
+      const companyDoc = await ctx.db.query("companies").first();
+      targetCompanyId = companyDoc?._id;
+    }
+    if (!targetCompanyId) {
+      targetCompanyId = await ctx.db.insert("companies", {
+        name: "JK Group International",
+        code: "JKG-001",
+        status: "active",
+        createdAt: Date.now(),
+      });
+    }
+
     const docId = await ctx.db.insert("documents", {
       userId: args.userId,
-      companyId: args.companyId,
+      companyId: targetCompanyId,
       title: args.title,
       documentType: args.documentType,
       storageId: args.storageId,
@@ -275,22 +293,128 @@ export const deleteDocument = mutation({
 export const listDocuments = query({
   args: {
     userId: v.optional(v.id("users")),
+    loggedInUserId: v.optional(v.id("users")),
+    companyId: v.optional(v.id("companies")),
+    roleName: v.optional(v.string()),
     documentType: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    let docs = args.userId
-      ? await ctx.db
+    // Backward compatibility: if loggedInUserId is missing, fall back to args.userId as active user
+    const activeUserId = args.loggedInUserId || args.userId;
+    if (!activeUserId) {
+      return [];
+    }
+
+    const activeRole = args.roleName || "Employee";
+    const activeCompanyId = args.companyId;
+
+    let docs = [];
+
+    // If a target userId is requested (e.g. viewing an employee's profile document vault)
+    if (args.userId) {
+      let isAuthorized = false;
+
+      if (!args.loggedInUserId || args.loggedInUserId === args.userId) {
+        // Self or loading state fallback
+        isAuthorized = true;
+      } else if (activeRole === "Super Admin" || activeRole === "HR Manager") {
+        isAuthorized = true;
+      } else if (activeRole === "General Manager") {
+        const targetUser = await ctx.db.get(args.userId);
+        if (targetUser && targetUser.companyId === activeCompanyId) {
+          isAuthorized = true;
+        }
+      } else if (activeRole === "Project Manager") {
+        // Project Manager checks
+        const managedProjects = await ctx.db
+          .query("projects")
+          .withIndex("by_projectManagerId", (q) => q.eq("projectManagerId", activeUserId))
+          .collect();
+        const projectIds = managedProjects.map((p) => p._id);
+
+        const assignedUserIds = new Set<string>();
+        assignedUserIds.add(activeUserId);
+
+        const attendanceLogs = await ctx.db.query("attendance").collect();
+        for (const log of attendanceLogs) {
+          if (log.projectId && projectIds.includes(log.projectId)) {
+            assignedUserIds.add(log.userId);
+          }
+        }
+
+        const timeRegs = await ctx.db.query("time_registrations").collect();
+        for (const reg of timeRegs) {
+          if (reg.projectId && projectIds.includes(reg.projectId)) {
+            assignedUserIds.add(reg.userId);
+          }
+        }
+
+        if (assignedUserIds.has(args.userId)) {
+          isAuthorized = true;
+        }
+      } else {
+        // Standard Employee / other role has no permission to view others' documents
+        isAuthorized = false;
+      }
+
+      if (isAuthorized) {
+        docs = await ctx.db
           .query("documents")
-          .withIndex("by_userId", (q) => q.eq("userId", args.userId!))
-          .collect()
-      : await ctx.db.query("documents").collect();
+          .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+          .collect();
+      }
+    } else {
+      // General list documents (viewing documents tab)
+      if (activeRole === "Super Admin" || activeRole === "HR Manager") {
+        docs = await ctx.db.query("documents").collect();
+      } else if (activeRole === "General Manager") {
+        if (activeCompanyId) {
+          docs = await ctx.db
+            .query("documents")
+            .withIndex("by_companyId", (q) => q.eq("companyId", activeCompanyId))
+            .collect();
+        }
+      } else if (activeRole === "Project Manager") {
+        const managedProjects = await ctx.db
+          .query("projects")
+          .withIndex("by_projectManagerId", (q) => q.eq("projectManagerId", activeUserId))
+          .collect();
+        const projectIds = managedProjects.map((p) => p._id);
+
+        const assignedUserIds = new Set<string>();
+        assignedUserIds.add(activeUserId);
+
+        const attendanceLogs = await ctx.db.query("attendance").collect();
+        for (const log of attendanceLogs) {
+          if (log.projectId && projectIds.includes(log.projectId)) {
+            assignedUserIds.add(log.userId);
+          }
+        }
+
+        const timeRegs = await ctx.db.query("time_registrations").collect();
+        for (const reg of timeRegs) {
+          if (reg.projectId && projectIds.includes(reg.projectId)) {
+            assignedUserIds.add(reg.userId);
+          }
+        }
+
+        const allDocs = await ctx.db.query("documents").collect();
+        docs = allDocs.filter((d) => assignedUserIds.has(d.userId));
+      } else {
+        docs = await ctx.db
+          .query("documents")
+          .withIndex("by_userId", (q) => q.eq("userId", activeUserId))
+          .collect();
+      }
+    }
+
     if (args.documentType) {
       docs = docs.filter((d) => d.documentType === args.documentType);
     }
 
     const result = [];
     for (const d of docs) {
-      const u = await ctx.db.get(d.userId);
+      const u = (await ctx.db.get(d.userId)) as any;
       const url = await ctx.storage.getUrl(d.storageId);
       result.push({
         ...d,

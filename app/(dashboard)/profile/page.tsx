@@ -41,6 +41,9 @@ export default function ProfilePage() {
       emergencyName: "",
       emergencyRelationship: "",
       emergencyPhone: "",
+      dateOfBirth: "",
+      placeOfBirth: "",
+      accommodationAddress: "",
     },
   });
 
@@ -70,6 +73,9 @@ export default function ProfilePage() {
         emergencyName: profile.emergencyContact?.name || "",
         emergencyRelationship: profile.emergencyContact?.relationship || "",
         emergencyPhone: profile.emergencyContact?.phone || "",
+        dateOfBirth: profile.dateOfBirth || "",
+        placeOfBirth: profile.placeOfBirth || "",
+        accommodationAddress: profile.accommodationAddress || "",
       });
 
       bankTaxForm.reset({
@@ -134,6 +140,9 @@ export default function ProfilePage() {
           relationship: values.emergencyRelationship || "",
           phone: values.emergencyPhone || "",
         },
+        dateOfBirth: values.dateOfBirth,
+        placeOfBirth: values.placeOfBirth,
+        accommodationAddress: values.accommodationAddress,
       });
       setFeedback("Personal details & emergency contact updated successfully.");
     } catch (err: any) {
@@ -282,6 +291,47 @@ export default function ProfilePage() {
                     placeholder="+1-555-0199"
                     {...personalForm.register("phone")}
                   />
+                </div>
+
+                {/* Date of Birth */}
+                <div className="col-md-6">
+                  <label className="form-label fw-bold small">Date of Birth *</label>
+                  <input
+                    type="date"
+                    className={`form-control ${personalForm.formState.errors.dateOfBirth ? "is-invalid" : ""}`}
+                    {...personalForm.register("dateOfBirth")}
+                  />
+                  {personalForm.formState.errors.dateOfBirth && (
+                    <div className="invalid-feedback">{personalForm.formState.errors.dateOfBirth.message}</div>
+                  )}
+                </div>
+
+                {/* Place of Birth */}
+                <div className="col-md-6">
+                  <label className="form-label fw-bold small">Place of Birth *</label>
+                  <input
+                    type="text"
+                    className={`form-control ${personalForm.formState.errors.placeOfBirth ? "is-invalid" : ""}`}
+                    placeholder="London"
+                    {...personalForm.register("placeOfBirth")}
+                  />
+                  {personalForm.formState.errors.placeOfBirth && (
+                    <div className="invalid-feedback">{personalForm.formState.errors.placeOfBirth.message}</div>
+                  )}
+                </div>
+
+                {/* Accommodation Address */}
+                <div className="col-md-6">
+                  <label className="form-label fw-bold small">Accommodation Address *</label>
+                  <textarea
+                    className={`form-control ${personalForm.formState.errors.accommodationAddress ? "is-invalid" : ""}`}
+                    rows={2}
+                    placeholder="Enter complete accommodation or housing address..."
+                    {...personalForm.register("accommodationAddress")}
+                  />
+                  {personalForm.formState.errors.accommodationAddress && (
+                    <div className="invalid-feedback">{personalForm.formState.errors.accommodationAddress.message}</div>
+                  )}
                 </div>
 
                 <div className="col-md-6">

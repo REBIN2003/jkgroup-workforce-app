@@ -32,6 +32,9 @@ export const registrationSchema = z
       .regex(/[0-9]/, "Password must contain at least one number")
       .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
     confirmPassword: z.string(),
+    dateOfBirth: z.string().min(1, "Date of Birth is required"),
+    placeOfBirth: z.string().trim().min(1, "Place of Birth is required"),
+    accommodationAddress: z.string().trim().min(1, "Accommodation Address is required"),
     acceptTerms: z.boolean().refine((val) => val === true, {
       message: "You must accept the terms and conditions to proceed",
     }),

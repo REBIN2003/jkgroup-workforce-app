@@ -93,6 +93,9 @@ export const updateProfile = mutation({
         phone: v.string(),
       })
     ),
+    dateOfBirth: v.optional(v.string()),
+    placeOfBirth: v.optional(v.string()),
+    accommodationAddress: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
@@ -104,6 +107,9 @@ export const updateProfile = mutation({
       profileImageStorageId: args.profileImageStorageId || user.profileImageStorageId,
       address: args.address,
       emergencyContact: args.emergencyContact,
+      dateOfBirth: args.dateOfBirth,
+      placeOfBirth: args.placeOfBirth,
+      accommodationAddress: args.accommodationAddress,
       updatedAt: Date.now(),
     });
 

@@ -492,9 +492,23 @@ export default function PendingRegistrationsPage() {
                         </div>
                       </div>
                       <div className="col-6">
+                        <span className="text-muted">Date of Birth:</span>
+                        <div className="fw-bold text-dark">{selectedApplicant.dateOfBirth || "N/A"}</div>
+                      </div>
+                      <div className="col-6">
+                        <span className="text-muted">Place of Birth:</span>
+                        <div className="fw-bold text-dark">{selectedApplicant.placeOfBirth || "N/A"}</div>
+                      </div>
+                      <div className="col-6">
                         <span className="text-muted">Email Verified:</span>
                         <div className="fw-bold text-success">
                           {selectedApplicant.emailVerified ? "Verified (OTP)" : "Pending / Active"}
+                        </div>
+                      </div>
+                      <div className="col-12 mt-2">
+                        <span className="text-muted">Accommodation Address:</span>
+                        <div className="fw-bold text-dark bg-light p-2 border mt-1" style={{ whiteSpace: "pre-wrap" }}>
+                          {selectedApplicant.accommodationAddress || "N/A"}
                         </div>
                       </div>
                       {selectedApplicant.rejectedReason && (
@@ -509,19 +523,44 @@ export default function PendingRegistrationsPage() {
 
                     {/* Uploaded Documents List */}
                     <h6 className="fw-bold border-bottom pb-2 text-dark mt-4">
-                      Uploaded Verification Documents ({selectedApplicant.uploadedDocuments?.length || 0})
+                      Uploaded Verification & Compliance Documents ({selectedApplicant.uploadedDocumentsWithUrls?.length || 0})
                     </h6>
-                    {(!selectedApplicant.uploadedDocuments || selectedApplicant.uploadedDocuments.length === 0) ? (
+                    {(!selectedApplicant.uploadedDocumentsWithUrls || selectedApplicant.uploadedDocumentsWithUrls.length === 0) ? (
                       <div className="small text-muted italic">No verification documents uploaded.</div>
                     ) : (
                       <div className="list-group list-group-flush border">
-                        {selectedApplicant.uploadedDocuments.map((doc: any, idx: number) => (
+                        {selectedApplicant.uploadedDocumentsWithUrls.map((doc: any, idx: number) => (
                           <div key={idx} className="list-group-item d-flex justify-content-between align-items-center py-2">
                             <div>
                               <i className="bi bi-file-earmark-pdf-fill text-danger me-2"></i>
                               <span className="small text-dark fw-bold">{doc.fileName || doc.title || `Document #${idx + 1}`}</span>
+                              {doc.documentType && (
+                                <span className="badge bg-secondary ms-2 text-uppercase">{doc.documentType.replace("_", " ")}</span>
+                              )}
                             </div>
-                            <span className="badge bg-secondary">Verified Record</span>
+                            <div className="btn-group btn-group-sm">
+                              {doc.fileUrl ? (
+                                <a
+                                  href={doc.fileUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="btn btn-outline-primary"
+                                >
+                                  Preview
+                                </a>
+                              ) : (
+                                <button disabled className="btn btn-outline-secondary">Processing</button>
+                              )}
+                              {doc.fileUrl && (
+                                <a
+                                  href={doc.fileUrl}
+                                  download={doc.fileName || `${doc.title}.pdf`}
+                                  className="btn btn-outline-secondary"
+                                >
+                                  Download
+                                </a>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>

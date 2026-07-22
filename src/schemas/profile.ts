@@ -11,6 +11,9 @@ export const profileSchema = z.object({
   emergencyName: z.string().optional(),
   emergencyRelationship: z.string().optional(),
   emergencyPhone: z.string().optional(),
+  dateOfBirth: z.string().min(1, "Date of birth is required"),
+  placeOfBirth: z.string().trim().min(1, "Place of birth is required"),
+  accommodationAddress: z.string().trim().min(1, "Accommodation address is required"),
 });
 
 export const bankTaxSchema = z.object({

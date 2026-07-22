@@ -61,9 +61,14 @@ export default defineSchema({
           storageId: v.id("_storage"),
           fileName: v.string(),
           fileType: v.string(),
+          documentType: v.optional(v.string()),
+          fileSize: v.optional(v.number()),
         })
       )
     ),
+    dateOfBirth: v.optional(v.string()),
+    placeOfBirth: v.optional(v.string()),
+    accommodationAddress: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -258,13 +263,22 @@ export default defineSchema({
       v.literal("certificate"),
       v.literal("id_proof"),
       v.literal("report"),
-      v.literal("other")
+      v.literal("other"),
+      v.literal("profile_photo"),
+      v.literal("tuv_certificate"),
+      v.literal("insurance_certificate"),
+      v.literal("vca_certificate")
     ),
     storageId: v.id("_storage"),
     fileSize: v.number(),
     fileType: v.string(),
     expiryDate: v.optional(v.string()),
     uploadedBy: v.id("users"),
+    originalFilename: v.optional(v.string()),
+    mimeType: v.optional(v.string()),
+    employeeId: v.optional(v.string()),
+    storageUrl: v.optional(v.string()),
+    updatedAt: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_userId", ["userId"])

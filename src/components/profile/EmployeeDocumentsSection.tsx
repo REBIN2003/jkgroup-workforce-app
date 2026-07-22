@@ -35,14 +35,15 @@ export function EmployeeDocumentsSection({ userId, isEditable = true }: Employee
   const rawDocuments =
     useQuery(api.documents.listDocuments, {
       userId,
+      loggedInUserId: user?._id,
+      companyId: user?.companyId,
+      roleName: user?.roleName,
     }) || [];
 
-  const companies = useQuery(api.companies.listCompanies, {}) || [];
-  const generateUploadUrlMut = useMutation(api.attendance.generateUploadUrl);
+  const generateUploadUrlMut = useMutation(api.documents.generateUploadUrl);
   const createDocumentMut = useMutation(api.documents.createDocument);
   const replaceDocumentMut = useMutation(api.documents.replaceDocumentFile);
   const deleteDocumentMut = useMutation(api.documents.deleteDocument);
-  const createCompanyMut = useMutation(api.companies.createCompany);
 
   // Client-Side Search & Sort Filter
   let documents = rawDocuments.filter((d: any) => d.userId === userId);
@@ -99,17 +100,7 @@ export function EmployeeDocumentsSection({ userId, isEditable = true }: Employee
 
     try {
       // Resolve company ID
-      let targetCompanyId = user.companyId ? user.companyId : undefined;
-      if (!targetCompanyId) {
-        if (companies.length > 0) {
-          targetCompanyId = companies[0]._id;
-        } else {
-          targetCompanyId = await createCompanyMut({
-            name: "JK Group International",
-            code: "JKG-001",
-          });
-        }
-      }
+      const targetCompanyId = user.companyId || undefined;
 
       let uploadedCount = 0;
       for (const file of selectedPdfFiles) {

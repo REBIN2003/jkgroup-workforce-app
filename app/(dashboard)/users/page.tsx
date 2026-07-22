@@ -48,6 +48,7 @@ export default function UsersPage() {
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "danger" | "success"; msg: string } | null>(null);
+  const [viewingEmployee, setViewingEmployee] = useState<any | null>(null);
 
   // Filtered Data
   const data = useMemo(() => {
@@ -157,30 +158,43 @@ export default function UsersPage() {
         header: "Actions",
         cell: (info) => {
           const u = info.row.original;
+          const isSuperAdmin = currentUser?.roleName === "Super Admin";
           return (
             <div className="d-flex gap-1">
               <button
                 type="button"
-                className="btn btn-erp-primary btn-sm py-0 px-2"
-                onClick={() => handleEdit(u)}
-                title="Edit Employee"
+                className="btn btn-erp-secondary btn-sm py-0 px-2 rounded-0"
+                onClick={() => setViewingEmployee(u as any)}
+                title="View Employee Details"
               >
-                <i className="bi bi-pencil"></i> EDIT
+                <i className="bi bi-eye"></i> VIEW
               </button>
-              <button
-                type="button"
-                className="btn btn-erp-danger btn-sm py-0 px-2"
-                onClick={() => handleDelete(u)}
-                title="Delete Employee"
-              >
-                <i className="bi bi-trash"></i> DELETE
-              </button>
+              {isSuperAdmin && (
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-erp-primary btn-sm py-0 px-2"
+                    onClick={() => handleEdit(u)}
+                    title="Edit Employee"
+                  >
+                    <i className="bi bi-pencil"></i> EDIT
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-erp-danger btn-sm py-0 px-2"
+                    onClick={() => handleDelete(u)}
+                    title="Delete Employee"
+                  >
+                    <i className="bi bi-trash"></i> DELETE
+                  </button>
+                </>
+              )}
             </div>
           );
         },
       }),
     ],
-    []
+    [currentUser]
   );
 
   const table = useReactTable({
@@ -199,17 +213,19 @@ export default function UsersPage() {
         subtitle="Manage employee records, organization assignments, and system access roles"
         breadcrumbs={[{ label: "Employee Directory" }]}
         actions={
-          <button
-            type="button"
-            className="btn btn-erp-danger btn-sm"
-            onClick={() => {
-              setEditingUser(null);
-              setEditingUserId(null);
-              setIsModalOpen(true);
-            }}
-          >
-            <i className="bi bi-person-plus-fill me-1"></i> ADD NEW EMPLOYEE
-          </button>
+          currentUser?.roleName === "Super Admin" && (
+            <button
+              type="button"
+              className="btn btn-erp-danger btn-sm"
+              onClick={() => {
+                setEditingUser(null);
+                setEditingUserId(null);
+                setIsModalOpen(true);
+              }}
+            >
+              <i className="bi bi-person-plus-fill me-1"></i> ADD NEW EMPLOYEE
+            </button>
+          )
         }
       />
 
@@ -348,6 +364,286 @@ export default function UsersPage() {
         initialData={editingUser}
         isSubmitting={isSubmitting}
       />
+
+      {/* Viewing Employee Details Modal */}
+      {viewingEmployee && (
+        <EmployeeDetailsModal
+          employee={viewingEmployee}
+          onClose={() => setViewingEmployee(null)}
+          currentUser={currentUser}
+        />
+      )}
+    </div>
+  );
+}
+
+// Separate component for Employee Details Modal to handle hooks cleanly
+interface EmployeeDetailsModalProps {
+  employee: any;
+  onClose: () => void;
+  currentUser: any;
+}
+
+function EmployeeDetailsModal({ employee, onClose, currentUser }: EmployeeDetailsModalProps) {
+  const isSuperAdmin = currentUser?.roleName === "Super Admin";
+
+  const userDocs =
+    useQuery(api.documents.listDocuments, {
+      userId: employee._id,
+      loggedInUserId: currentUser?._id,
+      companyId: currentUser?.companyId,
+      roleName: currentUser?.roleName,
+    }) || [];
+
+  const deleteDocumentMut = useMutation(api.documents.deleteDocument);
+  const replaceDocumentMut = useMutation(api.documents.replaceDocumentFile);
+  const generateUploadUrlMut = useMutation(api.documents.generateUploadUrl);
+
+  const [replacingDoc, setReplacingDoc] = useState<any | null>(null);
+  const [replaceFile, setReplaceFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const handleDeleteDoc = async (doc: any) => {
+    if (!confirm(`Are you sure you want to delete PDF document '${doc.title}'?`)) return;
+    try {
+      await deleteDocumentMut({
+        documentId: doc._id,
+        actorId: currentUser?._id,
+      });
+      setFeedback(`Document '${doc.title}' deleted successfully.`);
+    } catch (err: any) {
+      alert(err.message || "Failed to delete document.");
+    }
+  };
+
+  const handleReplaceDocSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!replacingDoc || !replaceFile) return;
+    setIsUploading(true);
+    try {
+      const uploadUrl = await generateUploadUrlMut();
+      const res = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": replaceFile.type },
+        body: replaceFile,
+      });
+      const { storageId } = await res.json();
+
+      await replaceDocumentMut({
+        documentId: replacingDoc._id,
+        storageId,
+        fileSize: replaceFile.size,
+        fileType: replaceFile.type,
+        actorId: currentUser._id,
+      });
+
+      setFeedback(`Document '${replacingDoc.title}' replaced successfully.`);
+      setReplacingDoc(null);
+      setReplaceFile(null);
+    } catch (err: any) {
+      alert(err.message || "Failed to replace document.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1040 }} tabIndex={-1}>
+      <div className="modal-dialog modal-lg modal-dialog-centered">
+        <div className="modal-content rounded-0">
+          <div className="modal-header bg-light py-2">
+            <h5 className="modal-title fw-bold text-dark">
+              <i className="bi bi-person-badge me-2 text-primary"></i>
+              Employee Details: {employee.fullName}
+            </h5>
+            <button type="button" className="btn-close" onClick={onClose}></button>
+          </div>
+
+          <div className="modal-body p-4" style={{ maxHeight: "75vh", overflowY: "auto" }}>
+            {feedback && (
+              <div className="alert alert-success rounded-0 py-2 small mb-3">
+                <i className="bi bi-check-circle-fill me-2"></i>
+                {feedback}
+              </div>
+            )}
+
+            <div className="row g-4">
+              {/* Photo & Role */}
+              <div className="col-md-4 text-center border-end">
+                {employee.profileImageUrl ? (
+                  <img
+                    src={employee.profileImageUrl}
+                    alt={employee.fullName}
+                    className="img-fluid rounded border mb-3"
+                    style={{ maxHeight: "180px", objectFit: "cover" }}
+                  />
+                ) : (
+                  <div
+                    className="bg-secondary text-white rounded d-flex align-items-center justify-content-center mx-auto mb-3 fw-bold"
+                    style={{ width: "120px", height: "120px", fontSize: "2rem" }}
+                  >
+                    {employee.fullName ? employee.fullName.substring(0, 2).toUpperCase() : "E"}
+                  </div>
+                )}
+                <h5 className="fw-bold text-dark mb-1">{employee.fullName}</h5>
+                <span className="badge bg-primary px-3 py-1 mb-2">{employee.roleName}</span>
+                <small className="d-block text-muted">
+                  Employee ID: <strong>{employee.employeeId}</strong>
+                </small>
+                <small className="d-block text-muted">
+                  Status: <strong className="text-success">{employee.status?.toUpperCase()}</strong>
+                </small>
+              </div>
+
+              {/* Personal Details */}
+              <div className="col-md-8">
+                <h6 className="fw-bold border-bottom pb-2 text-dark">Personal Information</h6>
+                <div className="row g-2 small">
+                  <div className="col-6">
+                    <span className="text-muted">Corporate Email:</span>
+                    <div className="fw-bold text-dark">{employee.email}</div>
+                  </div>
+                  <div className="col-6">
+                    <span className="text-muted">Mobile Phone:</span>
+                    <div className="fw-bold text-dark">{employee.phone || "N/A"}</div>
+                  </div>
+                  <div className="col-6">
+                    <span className="text-muted">Country:</span>
+                    <div className="fw-bold text-dark">{employee.country || "N/A"}</div>
+                  </div>
+                  <div className="col-6">
+                    <span className="text-muted">Date of Birth:</span>
+                    <div className="fw-bold text-dark">{employee.dateOfBirth || "N/A"}</div>
+                  </div>
+                  <div className="col-6">
+                    <span className="text-muted">Place of Birth:</span>
+                    <div className="fw-bold text-dark">{employee.placeOfBirth || "N/A"}</div>
+                  </div>
+                  <div className="col-12 mt-2">
+                    <span className="text-muted font-monospace">Accommodation Address:</span>
+                    <div className="fw-bold text-dark bg-light p-2 border mt-1" style={{ whiteSpace: "pre-wrap" }}>
+                      {employee.accommodationAddress || "N/A"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Uploaded Documents List */}
+                <h6 className="fw-bold border-bottom pb-2 text-dark mt-4">Uploaded Documents ({userDocs.length})</h6>
+                {userDocs.length === 0 ? (
+                  <div className="small text-muted italic">No documents found for this employee.</div>
+                ) : (
+                  <div className="table-responsive border">
+                    <table className="table table-sm table-hover align-middle mb-0 small">
+                      <thead className="table-light">
+                        <tr>
+                          <th className="ps-2">Title</th>
+                          <th>Category</th>
+                          <th className="text-end pe-2">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {userDocs.map((doc: any) => (
+                          <tr key={doc._id}>
+                            <td className="ps-2">
+                              <span className="fw-bold text-dark">{doc.title}</span>
+                            </td>
+                            <td>
+                              <span className="badge bg-secondary text-uppercase">{doc.documentType?.replace("_", " ")}</span>
+                            </td>
+                            <td className="text-end pe-2">
+                              <div className="btn-group btn-group-sm">
+                                {doc.fileUrl ? (
+                                  <a href={doc.fileUrl} target="_blank" rel="noreferrer" className="btn btn-outline-primary py-0 px-2">
+                                    Preview
+                                  </a>
+                                ) : (
+                                  <button disabled className="btn btn-outline-secondary py-0 px-2">Pending</button>
+                                )}
+                                {doc.fileUrl && (
+                                  <a href={doc.fileUrl} download={doc.fileName || `${doc.title}.pdf`} className="btn btn-outline-secondary py-0 px-2">
+                                    Download
+                                  </a>
+                                )}
+                                {isSuperAdmin && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="btn btn-outline-warning text-dark py-0 px-2"
+                                      onClick={() => {
+                                        setReplacingDoc(doc);
+                                        setReplaceFile(null);
+                                      }}
+                                    >
+                                      Replace
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="btn btn-outline-danger py-0 px-2"
+                                      onClick={() => handleDeleteDoc(doc)}
+                                    >
+                                      <i className="bi bi-trash"></i>
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="modal-footer bg-light py-2">
+            <button type="button" className="btn btn-secondary btn-sm" onClick={onClose}>
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* REPLACE DOCUMENT SUB-MODAL */}
+      {replacingDoc && (
+        <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.6)", zIndex: 1060 }} tabIndex={-1}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content rounded-0">
+              <form onSubmit={handleReplaceDocSubmit}>
+                <div className="modal-header bg-warning py-2 text-dark">
+                  <h5 className="modal-title fw-bold">Replace File: {replacingDoc.title}</h5>
+                  <button type="button" className="btn-close" onClick={() => setReplacingDoc(null)}></button>
+                </div>
+                <div className="modal-body p-4">
+                  <div className="mb-3">
+                    <label className="form-label fw-bold small text-dark">Select Replacement PDF/Image *</label>
+                    <input
+                      type="file"
+                      className="form-control"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setReplaceFile(e.target.files[0]);
+                        }
+                      }}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="modal-footer bg-light py-2">
+                  <button type="submit" className="btn btn-warning btn-sm fw-bold px-4 text-dark" disabled={isUploading || !replaceFile}>
+                    {isUploading ? "REPLACING..." : "CONFIRM REPLACE"}
+                  </button>
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => setReplacingDoc(null)}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

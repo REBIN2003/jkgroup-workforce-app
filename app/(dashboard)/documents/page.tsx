@@ -29,8 +29,12 @@ export default function DocumentsPage() {
 
   // Queries & Mutations
   const docs = useQuery(api.documents.listDocuments, {
+    loggedInUserId: user?._id,
+    companyId: user?.companyId,
+    roleName: user?.roleName,
     documentType: activeCategory || undefined,
   }) || [];
+
 
   const generateUploadUrlMut = useMutation(api.documents.generateUploadUrl);
   const createDocMut = useMutation(api.documents.createDocument);
@@ -64,9 +68,9 @@ export default function DocumentsPage() {
       });
       const { storageId } = await res.json();
 
-      await createDocMut({
+      const payload = {
         userId: user._id as any,
-        companyId: user.companyId || (user as any)._id,
+        companyId: user.companyId || undefined,
         title,
         documentType: docType,
         storageId: storageId as any,
@@ -74,7 +78,9 @@ export default function DocumentsPage() {
         fileType: selectedFile.type,
         expiryDate: expiryDate || undefined,
         uploadedBy: user._id as any,
-      });
+      };
+
+      const insertedDocId = await createDocMut(payload);
 
       setFeedback(`Document '${title}' uploaded successfully.`);
       setTitle("");

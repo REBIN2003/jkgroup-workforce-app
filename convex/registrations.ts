@@ -20,6 +20,9 @@ export const registerUser = mutation({
     password: v.string(),
     country: v.string(),
     roleName: v.union(v.literal("Employee"), v.literal("Project Manager"), v.literal("General Manager")),
+    dateOfBirth: v.string(),
+    placeOfBirth: v.string(),
+    accommodationAddress: v.string(),
     profileImageStorageId: v.optional(v.id("_storage")),
     uploadedDocuments: v.optional(
       v.array(
@@ -27,6 +30,8 @@ export const registerUser = mutation({
           storageId: v.id("_storage"),
           fileName: v.string(),
           fileType: v.string(),
+          documentType: v.optional(v.string()),
+          fileSize: v.optional(v.number()),
         })
       )
     ),
@@ -94,6 +99,9 @@ export const registerUser = mutation({
       employeeId: empId,
       profileImageStorageId: args.profileImageStorageId,
       uploadedDocuments: args.uploadedDocuments,
+      dateOfBirth: args.dateOfBirth,
+      placeOfBirth: args.placeOfBirth,
+      accommodationAddress: args.accommodationAddress,
       status: "inactive",
       approvalStatus: "pending",
       emailVerified: false,
@@ -276,6 +284,40 @@ export const approveRegistration = mutation({
       approvedAt: Date.now(),
       updatedAt: Date.now(),
     });
+
+    // Copy uploadedDocuments to documents collection upon approval
+    if (user.uploadedDocuments && user.uploadedDocuments.length > 0) {
+      for (const doc of user.uploadedDocuments) {
+        // Prevent duplicates
+        const existingDoc = await ctx.db
+          .query("documents")
+          .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+          .filter((q) => q.eq(q.field("storageId"), doc.storageId))
+          .first();
+
+        if (!existingDoc) {
+          const docType = (doc.documentType || "other") as any;
+          const storageUrl = await ctx.storage.getUrl(doc.storageId);
+
+          await ctx.db.insert("documents", {
+            userId: args.userId,
+            companyId: user.companyId || (await ctx.db.query("companies").first())?._id as any,
+            title: doc.fileName,
+            documentType: docType,
+            storageId: doc.storageId,
+            fileSize: doc.fileSize || 0,
+            fileType: doc.fileType,
+            uploadedBy: args.actorId || args.userId,
+            createdAt: Date.now(),
+            originalFilename: doc.fileName,
+            mimeType: doc.fileType,
+            employeeId: user.employeeId,
+            storageUrl: storageUrl || undefined,
+            updatedAt: Date.now(),
+          });
+        }
+      }
+    }
 
     await ctx.db.insert("audit_logs", {
       actorId: args.actorId || args.userId,
