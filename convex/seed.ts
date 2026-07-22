@@ -170,22 +170,76 @@ export const seedDatabase = mutation({
       }
     }
 
-    // 3. Link Super Admin Role to All Permissions
-    const superAdminRoleId = roleMap["Super Admin"];
-    if (superAdminRoleId) {
-      for (const p of initialPermissions) {
-        const existingLink = await ctx.db
-          .query("role_permissions")
-          .withIndex("by_role_perm", (q) =>
-            q.eq("roleId", superAdminRoleId).eq("permissionCode", p.code)
-          )
-          .first();
+    // 3. Link Roles to Permissions
+    const defaultRolePerms: Record<string, string[]> = {
+      "Super Admin": initialPermissions.map((p) => p.code),
+      "General Manager": [
+        "settings:view",
+        "users:create",
+        "users:read",
+        "users:update",
+        "companies:manage",
+        "companies:view",
+        "projects:create",
+        "projects:read",
+        "projects:update",
+        "attendance:clock",
+        "attendance:view_own",
+        "attendance:view_all",
+        "attendance:manage",
+        "leave:apply",
+        "leave:view_own",
+        "leave:view_all",
+        "leave:approve",
+        "documents:upload",
+        "documents:view_own",
+        "documents:view_all",
+        "documents:sign",
+        "audit:view",
+      ],
+      "Project Manager": [
+        "users:read",
+        "companies:view",
+        "projects:read",
+        "projects:update",
+        "attendance:clock",
+        "attendance:view_own",
+        "attendance:view_all",
+        "leave:apply",
+        "leave:view_own",
+        "leave:approve",
+        "documents:upload",
+        "documents:view_own",
+        "documents:view_all",
+        "documents:sign",
+      ],
+      "Employee": [
+        "attendance:clock",
+        "attendance:view_own",
+        "leave:apply",
+        "leave:view_own",
+        "documents:view_own",
+        "documents:sign",
+      ],
+    };
 
-        if (!existingLink) {
-          await ctx.db.insert("role_permissions", {
-            roleId: superAdminRoleId,
-            permissionCode: p.code,
-          });
+    for (const [roleName, perms] of Object.entries(defaultRolePerms)) {
+      const roleId = roleMap[roleName];
+      if (roleId) {
+        for (const permCode of perms) {
+          const existingLink = await ctx.db
+            .query("role_permissions")
+            .withIndex("by_role_perm", (q) =>
+              q.eq("roleId", roleId).eq("permissionCode", permCode)
+            )
+            .first();
+
+          if (!existingLink) {
+            await ctx.db.insert("role_permissions", {
+              roleId,
+              permissionCode: permCode,
+            });
+          }
         }
       }
     }

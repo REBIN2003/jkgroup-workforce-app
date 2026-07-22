@@ -59,7 +59,10 @@ export function useAuth() {
   const hasPermission = (permissionCode: string): boolean => {
     if (!currentSessionUser) return false;
     if (currentSessionUser.roleName === "Super Admin") return true;
-    return currentSessionUser.permissions.includes(permissionCode);
+    return (
+      currentSessionUser.permissions.includes("*") ||
+      currentSessionUser.permissions.includes(permissionCode)
+    );
   };
 
   return {
