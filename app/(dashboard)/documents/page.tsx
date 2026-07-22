@@ -257,7 +257,7 @@ export default function DocumentsPage() {
                       </td>
                       <td>
                         <span className="badge bg-secondary rounded-0 text-uppercase">
-                          {d.documentType.replace("_", " ")}
+                          {d.documentType ? d.documentType.replace("_", " ") : "other"}
                         </span>
                       </td>
                       <td>{d.userName} ({d.employeeId})</td>

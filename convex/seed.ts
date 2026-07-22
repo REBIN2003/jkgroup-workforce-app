@@ -265,6 +265,7 @@ export const seedDatabase = mutation({
     }
 
     // 5. Seed Default Super Admin Account
+    const superAdminRoleId = roleMap["Super Admin"];
     const targetEmail = "admin@company.com";
     const computedPasswordHash = hashPassword("Admin@123456");
 
