@@ -76,19 +76,15 @@ export default function RegisterPage() {
     setFormError(null);
     setIsSubmitting(true);
     try {
-      // 1. Validate required compliance documents
-      const hasTuv = docFiles.some((d) => d.category === "TUV");
-      const hasInsurance = docFiles.some((d) => d.category === "Insurance");
-      const hasVca = docFiles.some((d) => d.category === "VCA");
+      // 1. Validate required verification documents
+      const hasPassport = docFiles.some((d) => d.category === "Passport");
+      const hasVisaId = docFiles.some((d) => d.category === "Visa ID");
 
-      if (!hasTuv) {
-        throw new Error("TÜV Certificate is required.");
+      if (!hasPassport) {
+        throw new Error("Passport Copy is required.");
       }
-      if (!hasInsurance) {
-        throw new Error("Insurance Certificate is required.");
-      }
-      if (!hasVca) {
-        throw new Error("VCA Certificate is required.");
+      if (!hasVisaId) {
+        throw new Error("Visa / ID / Driving License is required.");
       }
 
       // 2. Validate file sizes and mime types
@@ -435,7 +431,7 @@ export default function RegisterPage() {
 
                   {/* Passport Document */}
                   <div className="col-md-6">
-                    <label className="form-label small text-dark">Passport Copy (PDF / Image)</label>
+                    <label className="form-label small text-dark fw-bold">Passport Copy (PDF / Image) *</label>
                     <input
                       type="file"
                       accept="application/pdf, image/png, image/jpeg, image/jpg"
@@ -446,7 +442,7 @@ export default function RegisterPage() {
 
                   {/* Visa / Driving License */}
                   <div className="col-md-6">
-                    <label className="form-label small text-dark">Visa / ID / Driving License (PDF / Image)</label>
+                    <label className="form-label small text-dark fw-bold">Visa / ID / Driving License (PDF / Image) *</label>
                     <input
                       type="file"
                       accept="application/pdf, image/png, image/jpeg, image/jpg"
@@ -473,7 +469,7 @@ export default function RegisterPage() {
 
                   {/* TÜV Certificate */}
                   <div className="col-md-4">
-                    <label className="form-label small text-dark fw-bold">TÜV Certificate *</label>
+                    <label className="form-label small text-dark fw-bold">TÜV Certificate</label>
                     <input
                       type="file"
                       accept="application/pdf, image/png, image/jpeg, image/jpg"
@@ -485,7 +481,7 @@ export default function RegisterPage() {
 
                   {/* Insurance Certificate */}
                   <div className="col-md-4">
-                    <label className="form-label small text-dark fw-bold">Insurance Certificate *</label>
+                    <label className="form-label small text-dark fw-bold">Insurance Certificate</label>
                     <input
                       type="file"
                       accept="application/pdf"
@@ -497,7 +493,7 @@ export default function RegisterPage() {
 
                   {/* VCA Certificate */}
                   <div className="col-md-4">
-                    <label className="form-label small text-dark fw-bold">VCA Certificate *</label>
+                    <label className="form-label small text-dark fw-bold">VCA Certificate</label>
                     <input
                       type="file"
                       accept="application/pdf, image/png, image/jpeg, image/jpg"
