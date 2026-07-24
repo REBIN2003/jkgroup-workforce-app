@@ -206,7 +206,8 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_user_year_week", ["userId", "year", "weekNumber"])
-    .index("by_company", ["companyId"]),
+    .index("by_company", ["companyId"])
+    .index("by_project", ["projectId"]),
 
   // 10. Leave Requests Collection
   leave_requests: defineTable({

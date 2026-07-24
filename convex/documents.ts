@@ -290,131 +290,189 @@ export const listDocuments = query({
     documentType: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Backward compatibility: if loggedInUserId is missing, fall back to args.userId as active user
-    const activeUserId = args.loggedInUserId || args.userId;
-    if (!activeUserId) {
-      return [];
-    }
+    // TEMPORARY DEBUG MODE: Log input arguments
+    console.log("listDocuments query initiated with args:", {
+      userId: args.userId,
+      loggedInUserId: args.loggedInUserId,
+      companyId: args.companyId,
+      roleName: args.roleName,
+      documentType: args.documentType,
+    });
 
-    const activeRole = args.roleName || "Employee";
-    const activeCompanyId = args.companyId;
-
-    let docs = [];
-
-    // If a target userId is requested (e.g. viewing an employee's profile document vault)
-    if (args.userId) {
-      let isAuthorized = false;
-
-      if (!args.loggedInUserId || args.loggedInUserId === args.userId) {
-        // Self or loading state fallback
-        isAuthorized = true;
-      } else if (activeRole === "Super Admin" || activeRole === "HR Manager") {
-        isAuthorized = true;
-      } else if (activeRole === "General Manager") {
-        const targetUser = await ctx.db.get(args.userId);
-        if (targetUser && targetUser.companyId === activeCompanyId) {
-          isAuthorized = true;
-        }
-      } else if (activeRole === "Project Manager") {
-        // Project Manager checks
-        const managedProjects = await ctx.db
-          .query("projects")
-          .withIndex("by_projectManagerId", (q) => q.eq("projectManagerId", activeUserId))
-          .collect();
-        const projectIds = managedProjects.map((p) => p._id);
-
-        const assignedUserIds = new Set<string>();
-        assignedUserIds.add(activeUserId);
-
-        const attendanceLogs = await ctx.db.query("attendance").collect();
-        for (const log of attendanceLogs) {
-          if (log.projectId && projectIds.includes(log.projectId)) {
-            assignedUserIds.add(log.userId);
-          }
-        }
-
-        const timeRegs = await ctx.db.query("time_registrations").collect();
-        for (const reg of timeRegs) {
-          if (reg.projectId && projectIds.includes(reg.projectId)) {
-            assignedUserIds.add(reg.userId);
-          }
-        }
-
-        if (assignedUserIds.has(args.userId)) {
-          isAuthorized = true;
-        }
-      } else {
-        // Standard Employee / other role has no permission to view others' documents
-        isAuthorized = false;
+    try {
+      // Backward compatibility: if loggedInUserId is missing, fall back to args.userId as active user
+      const activeUserId = args.loggedInUserId || args.userId;
+      if (!activeUserId) {
+        console.log("No activeUserId resolved. Returning empty list.");
+        return [];
       }
 
-      if (isAuthorized) {
-        docs = await ctx.db
-          .query("documents")
-          .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-          .collect();
-      }
-    } else {
-      // General list documents (viewing documents tab)
-      if (activeRole === "Super Admin" || activeRole === "HR Manager") {
-        docs = await ctx.db.query("documents").collect();
-      } else if (activeRole === "General Manager") {
-        if (activeCompanyId) {
+      const activeRole = args.roleName || "Employee";
+      const activeCompanyId = args.companyId;
+
+      let docs = [];
+
+      // If a target userId is requested (e.g. viewing an employee's profile document vault)
+      if (args.userId) {
+        let isAuthorized = false;
+
+        if (!args.loggedInUserId || args.loggedInUserId === args.userId) {
+          // Self or loading state fallback
+          isAuthorized = true;
+        } else if (activeRole === "Super Admin" || activeRole === "HR Manager") {
+          isAuthorized = true;
+        } else if (activeRole === "General Manager") {
+          const targetUser = await ctx.db.get(args.userId);
+          if (targetUser && targetUser.companyId === activeCompanyId) {
+            isAuthorized = true;
+          }
+        } else if (activeRole === "Project Manager") {
+          // Project Manager checks: Optimize to avoid full table scans
+          const managedProjects = await ctx.db
+            .query("projects")
+            .withIndex("by_projectManagerId", (q) => q.eq("projectManagerId", activeUserId))
+            .collect();
+          const projectIds = managedProjects.map((p) => p._id);
+
+          const assignedUserIds = new Set<string>();
+          assignedUserIds.add(activeUserId);
+
+          // Highly optimized: Query attendance logs using project index instead of collecting all logs
+          for (const projectId of projectIds) {
+            const logs = await ctx.db
+              .query("attendance")
+              .withIndex("by_project_date", (q) => q.eq("projectId", projectId))
+              .collect();
+            for (const log of logs) {
+              assignedUserIds.add(log.userId);
+            }
+          }
+
+          // Highly optimized: Query time registrations using new project index instead of collecting all registrations
+          for (const projectId of projectIds) {
+            const regs = await ctx.db
+              .query("time_registrations")
+              .withIndex("by_project", (q) => q.eq("projectId", projectId))
+              .collect();
+            for (const reg of regs) {
+              assignedUserIds.add(reg.userId);
+            }
+          }
+
+          if (assignedUserIds.has(args.userId)) {
+            isAuthorized = true;
+          }
+        } else {
+          // Standard Employee / other role has no permission to view others' documents
+          isAuthorized = false;
+        }
+
+        if (isAuthorized) {
           docs = await ctx.db
             .query("documents")
-            .withIndex("by_companyId", (q) => q.eq("companyId", activeCompanyId))
+            .withIndex("by_userId", (q) => q.eq("userId", args.userId))
             .collect();
         }
-      } else if (activeRole === "Project Manager") {
-        const managedProjects = await ctx.db
-          .query("projects")
-          .withIndex("by_projectManagerId", (q) => q.eq("projectManagerId", activeUserId))
-          .collect();
-        const projectIds = managedProjects.map((p) => p._id);
-
-        const assignedUserIds = new Set<string>();
-        assignedUserIds.add(activeUserId);
-
-        const attendanceLogs = await ctx.db.query("attendance").collect();
-        for (const log of attendanceLogs) {
-          if (log.projectId && projectIds.includes(log.projectId)) {
-            assignedUserIds.add(log.userId);
-          }
-        }
-
-        const timeRegs = await ctx.db.query("time_registrations").collect();
-        for (const reg of timeRegs) {
-          if (reg.projectId && projectIds.includes(reg.projectId)) {
-            assignedUserIds.add(reg.userId);
-          }
-        }
-
-        const allDocs = await ctx.db.query("documents").collect();
-        docs = allDocs.filter((d) => assignedUserIds.has(d.userId));
       } else {
-        docs = await ctx.db
-          .query("documents")
-          .withIndex("by_userId", (q) => q.eq("userId", activeUserId))
-          .collect();
+        // General list documents (viewing documents tab)
+        if (activeRole === "Super Admin" || activeRole === "HR Manager") {
+          docs = await ctx.db.query("documents").collect();
+        } else if (activeRole === "General Manager") {
+          if (activeCompanyId) {
+            docs = await ctx.db
+              .query("documents")
+              .withIndex("by_companyId", (q) => q.eq("companyId", activeCompanyId))
+              .collect();
+          }
+        } else if (activeRole === "Project Manager") {
+          // Project Manager checks: Optimize to avoid full table scans
+          const managedProjects = await ctx.db
+            .query("projects")
+            .withIndex("by_projectManagerId", (q) => q.eq("projectManagerId", activeUserId))
+            .collect();
+          const projectIds = managedProjects.map((p) => p._id);
+
+          const assignedUserIds = new Set<string>();
+          assignedUserIds.add(activeUserId);
+
+          // Highly optimized: Query attendance logs using project index instead of collecting all logs
+          for (const projectId of projectIds) {
+            const logs = await ctx.db
+              .query("attendance")
+              .withIndex("by_project_date", (q) => q.eq("projectId", projectId))
+              .collect();
+            for (const log of logs) {
+              assignedUserIds.add(log.userId);
+            }
+          }
+
+          // Highly optimized: Query time registrations using new project index instead of collecting all registrations
+          for (const projectId of projectIds) {
+            const regs = await ctx.db
+              .query("time_registrations")
+              .withIndex("by_project", (q) => q.eq("projectId", projectId))
+              .collect();
+            for (const reg of regs) {
+              assignedUserIds.add(reg.userId);
+            }
+          }
+
+          // Highly optimized: Query documents by userId for each assigned user instead of collecting all documents
+          const docsList = [];
+          for (const assignedUserId of assignedUserIds) {
+            const userDocs = await ctx.db
+              .query("documents")
+              .withIndex("by_userId", (q) => q.eq("userId", assignedUserId as any))
+              .collect();
+            docsList.push(...userDocs);
+          }
+          docs = docsList;
+        } else {
+          docs = await ctx.db
+            .query("documents")
+            .withIndex("by_userId", (q) => q.eq("userId", activeUserId))
+            .collect();
+        }
       }
-    }
 
-    if (args.documentType) {
-      docs = docs.filter((d) => d.documentType === args.documentType);
-    }
+      if (args.documentType) {
+        docs = docs.filter((d) => d.documentType === args.documentType);
+      }
 
-    const result = [];
-    for (const d of docs) {
-      const u = (await ctx.db.get(d.userId)) as any;
-      const url = await ctx.storage.getUrl(d.storageId);
-      result.push({
-        ...d,
-        userName: u?.fullName || "Unknown",
-        employeeId: u?.employeeId || "N/A",
-        fileUrl: url,
-      });
-    }
+      console.log(`Retrieved ${docs.length} raw documents. Resolving metadata and URLs...`);
 
-    return result.sort((a, b) => b.createdAt - a.createdAt);
+      const result = [];
+      for (const d of docs) {
+        let u = null;
+        try {
+          u = await ctx.db.get(d.userId);
+        } catch (err) {
+          console.error(`Failed to resolve user for document ${d._id}:`, err);
+        }
+
+        let url = null;
+        try {
+          url = await ctx.storage.getUrl(d.storageId);
+        } catch (err) {
+          console.error(`Failed to resolve storage URL for document ${d._id}:`, err);
+        }
+
+        result.push({
+          ...d,
+          userName: u?.fullName || "Unknown",
+          employeeId: u?.employeeId || "N/A",
+          fileUrl: url,
+        });
+      }
+
+      // Sort newest first
+      const sortedResult = result.sort((a, b) => b.createdAt - a.createdAt);
+      console.log(`Successfully returned ${sortedResult.length} documents.`);
+      return sortedResult;
+    } catch (error: any) {
+      console.error("CRITICAL: Server error inside listDocuments query:", error);
+      // Return empty array or throw clean error to maintain backward compatibility
+      throw new Error(`Server error inside listDocuments: ${error.message || error}`);
+    }
   },
 });
