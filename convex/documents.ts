@@ -186,16 +186,7 @@ export const createDocument = mutation({
     userId: v.id("users"),
     companyId: v.optional(v.id("companies")),
     title: v.string(),
-    documentType: v.union(
-      v.literal("contract"),
-      v.literal("passport"),
-      v.literal("driving_license"),
-      v.literal("visa"),
-      v.literal("certificate"),
-      v.literal("id_proof"),
-      v.literal("report"),
-      v.literal("other")
-    ),
+    documentType: v.string(),
     storageId: v.id("_storage"),
     fileSize: v.number(),
     fileType: v.string(),

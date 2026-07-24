@@ -268,7 +268,7 @@ export default function DocumentsPage() {
                           <span className="text-muted">N/A</span>
                         )}
                       </td>
-                      <td>{(d.fileSize / 1024).toFixed(1)} KB</td>
+                      <td>{d.fileSize ? (d.fileSize / 1024).toFixed(1) + " KB" : "N/A"}</td>
                       <td>{new Date(d.createdAt).toLocaleDateString()}</td>
                       <td>
                         <div className="d-flex gap-1">
