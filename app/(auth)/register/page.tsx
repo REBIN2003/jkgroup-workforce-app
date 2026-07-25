@@ -13,6 +13,14 @@ type Step = "FORM" | "OTP" | "SUCCESS";
 
 export default function RegisterPage() {
   const [step, setStep] = useState<Step>("FORM");
+
+  const getCleanErrorMessage = (err: any, fallback: string) => {
+    let msg = err.message || fallback;
+    if (msg.includes("ConvexError:")) {
+      msg = msg.split("ConvexError:")[1].trim();
+    }
+    return msg;
+  };
   const [registeredUserId, setRegisteredUserId] = useState<string | null>(null);
   const [otpCodeInput, setOtpCodeInput] = useState("");
   const [otpInfo, setOtpInfo] = useState<string | null>(null);
@@ -182,7 +190,7 @@ export default function RegisterPage() {
       setOtpInfo(`OTP Code sent to ${values.email}: ${res.otpCode}`);
       setStep("OTP");
     } catch (err: any) {
-      setFormError(err.message || "Registration failed. Please check form details.");
+      setFormError(getCleanErrorMessage(err, "Registration failed. Please check form details."));
     } finally {
       setIsSubmitting(false);
     }
@@ -205,7 +213,7 @@ export default function RegisterPage() {
       });
       setStep("SUCCESS");
     } catch (err: any) {
-      setFormError(err.message || "Invalid OTP verification code.");
+      setFormError(getCleanErrorMessage(err, "Invalid OTP verification code."));
     } finally {
       setIsSubmitting(false);
     }
@@ -219,7 +227,7 @@ export default function RegisterPage() {
       const res = await resendOtpMut({ userId: registeredUserId as any });
       setOtpInfo(`New OTP Code generated: ${res.otpCode}`);
     } catch (err: any) {
-      setFormError(err.message || "Failed to resend OTP.");
+      setFormError(getCleanErrorMessage(err, "Failed to resend OTP."));
     } finally {
       setIsSubmitting(false);
     }
