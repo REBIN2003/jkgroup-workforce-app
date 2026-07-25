@@ -313,3 +313,64 @@ export const seedDatabase = mutation({
     };
   },
 });
+
+export const recoverApprovedDocuments = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
+    const approvedUsers = users.filter((u) => u.approvalStatus === "approved");
+    const firstCompany = await ctx.db.query("companies").first();
+
+    let recoveredCount = 0;
+
+    for (const user of approvedUsers) {
+      if (user.uploadedDocuments && user.uploadedDocuments.length > 0) {
+        for (const doc of user.uploadedDocuments) {
+          // Check if document already exists
+          const existingDoc = await ctx.db
+            .query("documents")
+            .withIndex("by_userId", (q) => q.eq("userId", user._id))
+            .filter((q) => q.eq(q.field("storageId"), doc.storageId))
+            .first();
+
+          if (!existingDoc) {
+            // Infer document type from fileName
+            let docType = "other";
+            const nameLower = doc.fileName.toLowerCase();
+            if (nameLower.includes("passport")) docType = "passport";
+            else if (nameLower.includes("visa") || nameLower.includes("id")) docType = "visa";
+            else if (nameLower.includes("certificate")) docType = "certificate";
+
+            const storageUrl = await ctx.storage.getUrl(doc.storageId);
+
+            await ctx.db.insert("documents", {
+              userId: user._id,
+              companyId: user.companyId || firstCompany?._id as any,
+              title: doc.fileName,
+              documentType: docType,
+              storageId: doc.storageId,
+              fileSize: doc.fileSize || 0,
+              fileType: doc.fileType || "application/pdf",
+              uploadedBy: user.approvedBy || user._id,
+              createdAt: user.approvedAt || Date.now(),
+              originalFilename: doc.fileName,
+              mimeType: doc.fileType || "application/pdf",
+              employeeId: user.employeeId,
+              storageUrl: storageUrl || undefined,
+              updatedAt: Date.now(),
+            });
+
+            recoveredCount++;
+          }
+        }
+      }
+    }
+
+    return {
+      success: true,
+      recoveredCount,
+      message: `Successfully recovered ${recoveredCount} documents for approved users.`,
+    };
+  },
+});
+
