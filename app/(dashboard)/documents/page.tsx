@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { EnterprisePageHeader } from "../../../src/components/layout/EnterprisePageHeader";
@@ -32,6 +32,10 @@ export default function DocumentsPage() {
   const [previewDoc, setPreviewDoc] = useState<any | null>(null);
   const [replaceDoc, setReplaceDoc] = useState<any | null>(null);
 
+  // Selection states
+  const [selectedDocIds, setSelectedDocIds] = useState<Set<string>>(new Set());
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
+
   // Queries & Mutations
   const docs = useQuery(api.documents.listDocuments, {
     loggedInUserId: user?._id,
@@ -39,6 +43,55 @@ export default function DocumentsPage() {
     roleName: user?.roleName,
     documentType: activeCategory || undefined,
   }) || [];
+
+  // Clear selection if category or docs changes
+  useEffect(() => {
+    setSelectedDocIds(new Set());
+  }, [activeCategory, docs.length]);
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      const allIds = docs.map((d: any) => d._id);
+      setSelectedDocIds(new Set(allIds));
+    } else {
+      setSelectedDocIds(new Set());
+    }
+  };
+
+  const handleSelectDoc = (docId: string, checked: boolean) => {
+    setSelectedDocIds((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(docId);
+      } else {
+        next.delete(docId);
+      }
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedDocIds.size === 0) return;
+    const confirmMsg = `Are you sure you want to delete the ${selectedDocIds.size} selected document(s)? This action cannot be undone.`;
+    if (confirm(confirmMsg)) {
+      setIsDeletingBulk(true);
+      try {
+        const deletePromises = Array.from(selectedDocIds).map((docId) =>
+          deleteDocMut({
+            documentId: docId as any,
+            actorId: user?._id as any,
+          })
+        );
+        await Promise.all(deletePromises);
+        setFeedback(`Successfully deleted ${selectedDocIds.size} document(s).`);
+        setSelectedDocIds(new Set());
+      } catch (err: any) {
+        alert(err.message || "Failed to delete selected documents.");
+      } finally {
+        setIsDeletingBulk(false);
+      }
+    }
+  };
 
 
   const generateUploadUrlMut = useMutation(api.documents.generateUploadUrl);
@@ -239,10 +292,55 @@ export default function DocumentsPage() {
         </div>
 
         <div className="card-body p-0">
+          {/* Bulk actions bar */}
+          {selectedDocIds.size > 0 && (
+            <div className="d-flex align-items-center justify-content-between p-2 px-3 bg-light border-bottom border-danger">
+              <span className="text-danger fw-bold small">
+                <i className="bi bi-check2-square me-2"></i>
+                {selectedDocIds.size} document(s) selected
+              </span>
+              <div className="d-flex gap-2">
+                <button
+                  type="button"
+                  className="btn btn-danger btn-sm rounded-0 py-1"
+                  onClick={handleBulkDelete}
+                  disabled={isDeletingBulk}
+                >
+                  {isDeletingBulk ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                      DELETING...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-trash me-1"></i> DELETE SELECTED
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-sm rounded-0 py-1"
+                  onClick={() => setSelectedDocIds(new Set())}
+                  disabled={isDeletingBulk}
+                >
+                  CLEAR
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="table-responsive">
             <table className="table erp-table table-bordered table-striped table-hover mb-0">
               <thead>
                 <tr>
+                  <th style={{ width: "40px" }} className="text-center">
+                    <input
+                      type="checkbox"
+                      className="form-check-input"
+                      checked={docs.length > 0 && selectedDocIds.size === docs.length}
+                      onChange={handleSelectAll}
+                    />
+                  </th>
                   <th>Document Title</th>
                   <th>Category</th>
                   <th>Owner / Emp ID</th>
@@ -256,6 +354,14 @@ export default function DocumentsPage() {
                 {docs.length > 0 ? (
                   docs.map((d: any) => (
                     <tr key={d._id}>
+                      <td className="text-center">
+                        <input
+                          type="checkbox"
+                          className="form-check-input"
+                          checked={selectedDocIds.has(d._id)}
+                          onChange={(e) => handleSelectDoc(d._id, e.target.checked)}
+                        />
+                      </td>
                       <td>
                         <i className="bi bi-file-earmark me-2 text-primary"></i>
                         <strong>{d.title}</strong>
@@ -312,7 +418,7 @@ export default function DocumentsPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={7} className="text-center text-muted py-4">
+                    <td colSpan={8} className="text-center text-muted py-4">
                       No document records found under this category.
                     </td>
                   </tr>
