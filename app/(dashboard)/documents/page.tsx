@@ -6,7 +6,12 @@ import { api } from "../../../convex/_generated/api";
 import { EnterprisePageHeader } from "../../../src/components/layout/EnterprisePageHeader";
 import { useAuth } from "../../../src/hooks/useAuth";
 import { useDropzone } from "react-dropzone";
-import { DownloadContractButton } from "../../../src/components/pdf/EmploymentContractPdf";
+import dynamic from "next/dynamic";
+
+const DownloadContractButton = dynamic(
+  () => import("../../../src/components/pdf/EmploymentContractPdf").then((mod) => mod.DownloadContractButton),
+  { ssr: false }
+);
 import { BootstrapModal } from "../../../src/components/modal/BootstrapModal";
 
 export default function DocumentsPage() {
