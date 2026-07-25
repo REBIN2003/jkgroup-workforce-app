@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { hashPassword } from "./seed";
 
@@ -39,7 +39,7 @@ export const registerUser = mutation({
   handler: async (ctx, args) => {
     // Role Guard: Prevent Public Super Admin Registration
     if ((args.roleName as string) === "Super Admin") {
-      throw new Error("Super Admin accounts cannot be created via public registration.");
+      throw new ConvexError("Super Admin accounts cannot be created via public registration.");
     }
 
     const normalizedEmail = args.email.trim().toLowerCase();
@@ -51,14 +51,14 @@ export const registerUser = mutation({
       .first();
 
     if (existingEmail) {
-      throw new Error("An account with this corporate email address already exists.");
+      throw new ConvexError("An account with this corporate email address already exists.");
     }
 
     // Check duplicate phone
     const existingPhone = await ctx.db.query("users").collect();
     const phoneExists = existingPhone.some((u) => u.phone === args.phone.trim());
     if (phoneExists) {
-      throw new Error("An account with this mobile number already exists.");
+      throw new ConvexError("An account with this mobile number already exists.");
     }
 
     // Lookup Role Record
@@ -68,7 +68,7 @@ export const registerUser = mutation({
       .first();
 
     if (!roleDoc) {
-      throw new Error(`Target system role '${args.roleName}' not found.`);
+      throw new ConvexError(`Target system role '${args.roleName}' not found.`);
     }
 
     // Lookup Company Entity
@@ -138,17 +138,17 @@ export const verifyRegistrationOtp = mutation({
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
     if (!user || !user.otpCode || !user.otpExpiresAt) {
-      throw new Error("Invalid or expired OTP verification code.");
+      throw new ConvexError("Invalid or expired OTP verification code.");
     }
 
     if (Date.now() > user.otpExpiresAt) {
-      throw new Error("OTP Verification Code Expired. Please request a new code.");
+      throw new ConvexError("OTP Verification Code Expired. Please request a new code.");
     }
 
     const isDev = process.env.NODE_ENV === "development" || !process.env.NODE_ENV;
     const isBypass = args.otpCode === "123456" && isDev;
     if (user.otpCode !== args.otpCode && !isBypass) {
-      throw new Error("Invalid OTP code. Please check the code sent to your email.");
+      throw new ConvexError("Invalid OTP code. Please check the code sent to your email.");
     }
 
     await ctx.db.patch(args.userId, {
@@ -178,7 +178,7 @@ export const resendRegistrationOtp = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
-    if (!user) throw new Error("Registration record not found.");
+    if (!user) throw new ConvexError("Registration record not found.");
 
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpiresAt = Date.now() + 15 * 60 * 1000;
@@ -274,7 +274,7 @@ export const approveRegistration = mutation({
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
-    if (!user) throw new Error("Registration record not found.");
+    if (!user) throw new ConvexError("Registration record not found.");
 
     await ctx.db.patch(args.userId, {
       approvalStatus: "approved",
@@ -340,7 +340,7 @@ export const rejectRegistration = mutation({
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
-    if (!user) throw new Error("Registration record not found.");
+    if (!user) throw new ConvexError("Registration record not found.");
 
     await ctx.db.patch(args.userId, {
       approvalStatus: "rejected",
@@ -371,7 +371,7 @@ export const deleteRegistration = mutation({
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
-    if (!user) throw new Error("Registration record not found.");
+    if (!user) throw new ConvexError("Registration record not found.");
 
     // Delete stored files if present
     if (user.profileImageStorageId) {
