@@ -131,16 +131,16 @@ export const updateBankAndTaxDetails = mutation({
     userId: v.id("users"),
     bankDetails: v.optional(
       v.object({
-        bankName: v.string(),
-        accountNumber: v.string(),
-        iban: v.string(),
-        swift: v.string(),
+        bankName: v.optional(v.string()),
+        accountNumber: v.optional(v.string()),
+        iban: v.optional(v.string()),
+        swift: v.optional(v.string()),
       })
     ),
     taxDetails: v.optional(
       v.object({
-        taxId: v.string(),
-        taxCategory: v.string(),
+        taxId: v.optional(v.string()),
+        taxCategory: v.optional(v.string()),
       })
     ),
   },

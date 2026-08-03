@@ -23,18 +23,34 @@ export default function ForgotPasswordPage() {
     defaultValues: { email: "" },
   });
 
+  const extractErrorMessage = (err: any, fallback: string) => {
+    if (typeof err?.data === "string") return err.data;
+    if (typeof err?.data?.message === "string") return err.data.message;
+    if (typeof err?.message === "string") {
+      return err.message
+        .replace(/^Uncaught ConvexError:\s*/i, "")
+        .replace(/^\[CONVEX M\([^)]+\)\]\s*/i, "")
+        .replace(/^\[CONVEX [^\]]+\]\s*/i, "");
+    }
+    return fallback;
+  };
+
   const onSubmit = async (values: OtpRequestFormValues) => {
     setErrorMsg(null);
     setSuccessMsg(null);
     setIsSubmitting(true);
     try {
       const res = await requestOtpMut({ email: values.email });
-      setSuccessMsg(res.message + " Redirecting to reset password page...");
-      setTimeout(() => {
-        router.push(`/reset-password?email=${encodeURIComponent(values.email)}`);
-      }, 2000);
+      if (res.success) {
+        setSuccessMsg(res.message + " Redirecting to reset password page...");
+        setTimeout(() => {
+          router.push(`/reset-password?email=${encodeURIComponent(values.email)}`);
+        }, 2000);
+      } else {
+        setErrorMsg(res.message || "Failed to process password recovery request.");
+      }
     } catch (err: any) {
-      setErrorMsg(err.message || "Failed to process password recovery request.");
+      setErrorMsg(extractErrorMessage(err, "Failed to process password recovery request."));
     } finally {
       setIsSubmitting(false);
     }

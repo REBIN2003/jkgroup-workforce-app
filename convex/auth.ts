@@ -18,19 +18,28 @@ export const loginWithPassword = mutation({
       .first();
 
     if (!user) {
-      throw new Error("Invalid Email or Password");
+      return { success: false, message: "Invalid Email or Password" };
     }
 
     if (user.approvalStatus === "pending") {
-      throw new Error("Your registration is pending Super Admin approval. Please try again after approval.");
+      return {
+        success: false,
+        message: "Your registration is pending Super Admin approval. Please try again after approval.",
+      };
     }
 
     if (user.approvalStatus === "rejected") {
-      throw new Error(`Registration rejected by Administrator: ${user.rejectedReason || "No reason provided"}`);
+      return {
+        success: false,
+        message: `Registration rejected by Administrator: ${user.rejectedReason || "No reason provided"}`,
+      };
     }
 
     if (user.status !== "active") {
-      throw new Error("Account is inactive or suspended. Contact Administrator.");
+      return {
+        success: false,
+        message: "Account is inactive or suspended. Contact Administrator.",
+      };
     }
 
     // Verify Hashed Password strictly against database record (supporting SHA-256 and legacy shifts)
@@ -42,13 +51,13 @@ export const loginWithPassword = mutation({
       user.passwordHash === args.password;
 
     if (!isPasswordValid) {
-      throw new Error("Invalid Email or Password");
+      return { success: false, message: "Invalid Email or Password" };
     }
 
     // Fetch Role & Assigned Permissions from Database
     const role = await ctx.db.get(user.roleId);
     if (!role) {
-      throw new Error("User role record not found in system.");
+      return { success: false, message: "User role record not found in system." };
     }
 
     const rolePerms = await ctx.db
@@ -79,6 +88,7 @@ export const loginWithPassword = mutation({
     });
 
     return {
+      success: true,
       sessionToken,
       user: {
         _id: user._id,
@@ -105,7 +115,7 @@ export const requestOtp = mutation({
       .first();
 
     if (!user) {
-      throw new Error("User with this email does not exist.");
+      return { success: false, message: "User with this email address does not exist." };
     }
 
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -143,15 +153,15 @@ export const loginWithOtp = mutation({
       .first();
 
     if (!user || !user.otpCode || !user.otpExpiresAt) {
-      throw new Error("Invalid or expired OTP code.");
+      return { success: false, message: "Invalid or expired OTP code." };
     }
 
     if (Date.now() > user.otpExpiresAt) {
-      throw new Error("OTP Code Expired.");
+      return { success: false, message: "OTP Code Expired." };
     }
 
     if (user.otpCode !== args.otpCode) {
-      throw new Error("Invalid OTP code.");
+      return { success: false, message: "Invalid OTP code." };
     }
 
     await ctx.db.patch(user._id, {
@@ -180,6 +190,7 @@ export const loginWithOtp = mutation({
     });
 
     return {
+      success: true,
       sessionToken,
       user: {
         _id: user._id,
@@ -210,15 +221,15 @@ export const resetPasswordWithOtp = mutation({
       .first();
 
     if (!user || !user.otpCode || !user.otpExpiresAt) {
-      throw new Error("Invalid OTP code.");
+      return { success: false, message: "Invalid or expired OTP code." };
     }
 
     if (Date.now() > user.otpExpiresAt) {
-      throw new Error("OTP Code Expired.");
+      return { success: false, message: "OTP Code Expired." };
     }
 
     if (user.otpCode !== args.otpCode) {
-      throw new Error("Invalid OTP code.");
+      return { success: false, message: "Invalid OTP code." };
     }
 
     await ctx.db.patch(user._id, {

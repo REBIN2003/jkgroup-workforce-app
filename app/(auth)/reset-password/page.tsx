@@ -37,22 +37,38 @@ function ResetPasswordFormContent() {
     }
   }, [emailParam, form]);
 
+  const extractErrorMessage = (err: any, fallback: string) => {
+    if (typeof err?.data === "string") return err.data;
+    if (typeof err?.data?.message === "string") return err.data.message;
+    if (typeof err?.message === "string") {
+      return err.message
+        .replace(/^Uncaught ConvexError:\s*/i, "")
+        .replace(/^\[CONVEX M\([^)]+\)\]\s*/i, "")
+        .replace(/^\[CONVEX [^\]]+\]\s*/i, "");
+    }
+    return fallback;
+  };
+
   const onSubmit = async (values: ResetPasswordFormValues) => {
     setErrorMsg(null);
     setSuccessMsg(null);
     setIsSubmitting(true);
     try {
-      await resetMut({
+      const res = await resetMut({
         email: values.email,
         otpCode: values.otpCode,
         newPassword: values.newPassword,
       });
-      setSuccessMsg("Password reset successfully. Redirecting to login...");
-      setTimeout(() => {
-        router.push("/login");
-      }, 2000);
+      if (res.success) {
+        setSuccessMsg(res.message || "Password reset successfully. Redirecting to login...");
+        setTimeout(() => {
+          router.push("/login");
+        }, 2000);
+      } else {
+        setErrorMsg(res.message || "Failed to reset password. Verify OTP code.");
+      }
     } catch (err: any) {
-      setErrorMsg(err.message || "Failed to reset password. Verify OTP code.");
+      setErrorMsg(extractErrorMessage(err, "Failed to reset password. Verify OTP code."));
     } finally {
       setIsSubmitting(false);
     }

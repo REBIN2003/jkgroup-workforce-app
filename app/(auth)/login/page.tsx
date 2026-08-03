@@ -40,6 +40,18 @@ export default function LoginPage() {
     defaultValues: { email: "", otpCode: "" },
   });
 
+  const extractErrorMessage = (err: any, fallback: string) => {
+    if (typeof err?.data === "string") return err.data;
+    if (typeof err?.data?.message === "string") return err.data.message;
+    if (typeof err?.message === "string") {
+      return err.message
+        .replace(/^Uncaught ConvexError:\s*/i, "")
+        .replace(/^\[CONVEX M\([^)]+\)\]\s*/i, "")
+        .replace(/^\[CONVEX [^\]]+\]\s*/i, "");
+    }
+    return fallback;
+  };
+
   const handlePasswordSubmit = async (values: PasswordLoginFormValues) => {
     setAuthError(null);
     setInfoMessage(null);
@@ -50,9 +62,13 @@ export default function LoginPage() {
         password: values.password,
       });
 
-      login(res.sessionToken, res.user);
+      if (res.success && res.sessionToken && res.user) {
+        login(res.sessionToken, res.user);
+      } else {
+        setAuthError(res.message || "Login failed. Invalid email or password.");
+      }
     } catch (err: any) {
-      setAuthError(err.message || "Login failed. Invalid email or password.");
+      setAuthError(extractErrorMessage(err, "Login failed. Invalid email or password."));
     } finally {
       setIsSubmitting(false);
     }
@@ -65,13 +81,18 @@ export default function LoginPage() {
       return;
     }
     setAuthError(null);
+    setInfoMessage(null);
     setIsSubmitting(true);
     try {
       const res = await requestOtpMut({ email });
-      setOtpSent(true);
-      setInfoMessage(res.message);
+      if (res.success) {
+        setOtpSent(true);
+        setInfoMessage(res.message);
+      } else {
+        setAuthError(res.message || "Failed to generate OTP code.");
+      }
     } catch (err: any) {
-      setAuthError(err.message || "Failed to generate OTP code.");
+      setAuthError(extractErrorMessage(err, "Failed to generate OTP code."));
     } finally {
       setIsSubmitting(false);
     }
@@ -85,9 +106,13 @@ export default function LoginPage() {
         email: values.email,
         otpCode: values.otpCode,
       });
-      login(res.sessionToken, res.user);
+      if (res.success && res.sessionToken && res.user) {
+        login(res.sessionToken, res.user);
+      } else {
+        setAuthError(res.message || "Invalid or expired OTP code.");
+      }
     } catch (err: any) {
-      setAuthError(err.message || "Invalid or expired OTP code.");
+      setAuthError(extractErrorMessage(err, "Invalid or expired OTP code."));
     } finally {
       setIsSubmitting(false);
     }
