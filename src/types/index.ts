@@ -15,15 +15,15 @@ export interface EmergencyContactInfo {
 }
 
 export interface BankDetailsInfo {
-  bankName?: string;
-  accountNumber?: string;
-  iban?: string;
-  swift?: string;
+  bankName: string;
+  accountNumber: string;
+  iban: string;
+  swift: string;
 }
 
 export interface TaxDetailsInfo {
-  taxId?: string;
-  taxCategory?: string;
+  taxId: string;
+  taxCategory: string;
 }
 
 export interface SystemUser {

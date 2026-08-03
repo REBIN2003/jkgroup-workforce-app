@@ -262,7 +262,7 @@ export function EmployeeDocumentsSection({ userId, isEditable = true }: Employee
                   </div>
 
                   <div className="col-md-5">
-                    <label className="form-label small fw-bold text-dark">Select PDF File(s) (Optional) (Max 10 MB)</label>
+                    <label className="form-label small fw-bold text-dark">Select PDF File(s) * (Max 10 MB)</label>
                     <input
                       type="file"
                       accept="application/pdf, .pdf"

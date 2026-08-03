@@ -17,12 +17,12 @@ export const profileSchema = z.object({
 });
 
 export const bankTaxSchema = z.object({
-  bankName: z.string().optional(),
-  accountNumber: z.string().optional(),
-  iban: z.string().optional(),
-  swift: z.string().optional(),
-  taxId: z.string().optional(),
-  taxCategory: z.string().optional(),
+  bankName: z.string().min(2, "Bank name is required"),
+  accountNumber: z.string().min(4, "Account number is required"),
+  iban: z.string().min(6, "Valid IBAN is required"),
+  swift: z.string().min(4, "Valid SWIFT/BIC code is required"),
+  taxId: z.string().min(2, "Tax ID is required"),
+  taxCategory: z.string().min(1, "Tax category is required"),
 });
 
 export type ProfileFormValues = z.infer<typeof profileSchema>;

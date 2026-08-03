@@ -397,7 +397,7 @@ export default function ProfilePage() {
               <h6 className="fw-bold text-primary mb-3 border-bottom pb-2">BANK & PAYROLL DISBURSEMENT DETAILS</h6>
               <div className="row g-3 mb-4">
                 <div className="col-md-6">
-                  <label className="form-label fw-bold small">Bank Entity Name (Optional)</label>
+                  <label className="form-label fw-bold small">Bank Entity Name *</label>
                   <input
                     type="text"
                     className={`form-control ${bankTaxForm.formState.errors.bankName ? "is-invalid" : ""}`}
@@ -410,7 +410,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="col-md-6">
-                  <label className="form-label fw-bold small">Bank Account Number (Optional)</label>
+                  <label className="form-label fw-bold small">Bank Account Number *</label>
                   <input
                     type="text"
                     className={`form-control ${bankTaxForm.formState.errors.accountNumber ? "is-invalid" : ""}`}
@@ -423,7 +423,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="col-md-6">
-                  <label className="form-label fw-bold small">IBAN (International Bank Account Number) (Optional)</label>
+                  <label className="form-label fw-bold small">IBAN (International Bank Account Number) *</label>
                   <input
                     type="text"
                     className={`form-control ${bankTaxForm.formState.errors.iban ? "is-invalid" : ""}`}
@@ -436,7 +436,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="col-md-6">
-                  <label className="form-label fw-bold small">SWIFT / BIC Code (Optional)</label>
+                  <label className="form-label fw-bold small">SWIFT / BIC Code *</label>
                   <input
                     type="text"
                     className={`form-control ${bankTaxForm.formState.errors.swift ? "is-invalid" : ""}`}
@@ -452,7 +452,7 @@ export default function ProfilePage() {
               <h6 className="fw-bold text-dark mb-3 border-bottom pb-2">TAX & COMPLIANCE REGISTRATION</h6>
               <div className="row g-3 mb-4">
                 <div className="col-md-6">
-                  <label className="form-label fw-bold small">Tax Identification Number (TIN / SSN) (Optional)</label>
+                  <label className="form-label fw-bold small">Tax Identification Number (TIN / SSN) *</label>
                   <input
                     type="text"
                     className={`form-control ${bankTaxForm.formState.errors.taxId ? "is-invalid" : ""}`}
@@ -465,7 +465,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="col-md-6">
-                  <label className="form-label fw-bold small">Tax Filing Category (Optional)</label>
+                  <label className="form-label fw-bold small">Tax Filing Category *</label>
                   <select className="form-select" {...bankTaxForm.register("taxCategory")}>
                     <option value="Standard Individual W-2">Standard Individual W-2</option>
                     <option value="1099 Contractor">1099 Contractor</option>
