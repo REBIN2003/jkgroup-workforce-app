@@ -139,8 +139,8 @@ export const updateBankAndTaxDetails = mutation({
     ),
     taxDetails: v.optional(
       v.object({
-        taxId: v.string(),
-        taxCategory: v.string(),
+        taxId: v.optional(v.string()),
+        taxCategory: v.optional(v.string()),
       })
     ),
   },

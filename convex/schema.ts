@@ -38,8 +38,8 @@ export default defineSchema({
     ),
     taxDetails: v.optional(
       v.object({
-        taxId: v.string(),
-        taxCategory: v.string(),
+        taxId: v.optional(v.string()),
+        taxCategory: v.optional(v.string()),
       })
     ),
     status: v.union(v.literal("active"), v.literal("inactive"), v.literal("suspended")),

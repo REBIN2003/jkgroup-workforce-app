@@ -22,8 +22,8 @@ export interface BankDetailsInfo {
 }
 
 export interface TaxDetailsInfo {
-  taxId: string;
-  taxCategory: string;
+  taxId?: string;
+  taxCategory?: string;
 }
 
 export interface SystemUser {
